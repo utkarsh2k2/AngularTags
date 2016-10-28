@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>{% block title %}Welcome!{% endblock %}</title>
+        {% block stylesheets %}
+            <link rel="stylesheet" href="{{ asset('css/ng-tags-input.min.css') }}">
+        {% endblock %}
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
+        {% block javascripts %}
+            <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.2/angular.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/ng-tags-input/3.1.1/ng-tags-input.js"></script>
+            {#        <script src="{{ asset('js/tags.json') }}"></script>#}
+            <script src="{{ asset('bundles/fosjsrouting/js/router.js') }}"></script>
+            <script src="{{ path('fos_js_routing_js', { callback: 'fos.Router.setData' }) }}"></script>
+            <script>
+                var app = angular.module('plunker', ['ngTagsInput']);
+
+                app.controller('MainCtrl', function($scope, $http, tags) {
+                    $scope.myTxt = "You have not yet clicked submit";
+                    $scope.show_result = false;
+                    $scope.myFunc = function() {
+                        $scope.myTxt = "You clicked submit!";
+                        $scope.show_result = true;
+                    }
+
+                    $scope.categories = [
+                        {"id": 1, "categoryname": "standard"},
+                        {"id": 2, "categoryname": "premium"},
+                        {"id": 3, "categoryname": "gold"}
+                    ];
+
+                    $scope.loadTags = function(query) {
+                        return tags.load(query);
+                    }
+
+                    $scope.submitData = function() {
+                        $scope.form = [];
+                        $scope.form[0] = $scope.category;
+                        $scope.form[1] = $scope.tags;
+                        console.log($scope.form);
+                        var jsonString = JSON.stringify($scope.form);
+                        $http.post(Routing.generate('my_route_to_submit'), jsonString, {'content-type': 'application/x-www-form-urlencoded'})
+                                .success(function(data, status) {
+                                    $scope.status = status;
+                                    $scope.data = data;
+                                    $scope.result = data;
+                                })
+                                .error(function(data, status) {
+                                    $scope.ResponseDetails = "Data: " + data +
+                                            "<hr />status: " + status;
+                                });
+                    }
+                });
+
+                app.service('tags', function($q, $http, $filter) {
+                    this.load = function(query) {
+                        return $http.get(Routing.generate('my_route_to_json_data')).then(
+                                function(result) {
+                                    return $filter('filter')(result.data, query)
+                                }
+                        )
+                    };
+                });
+            </script>
+        {% endblock %}
+    </head>
+
+
+    {% block body %}
+        {% verbatim %}
+            <body ng-app="plunker">    
+                <form ng-submit="myFunc()" ng-controller="MainCtrl">
+                    <label><b>Category:</b></label>
+                    <select ng-model="category" ng-options="x.categoryname for x in categories track by x.id">
+                        <option value="">Choose a Category</option>
+                    </select>
+                    <p>Model: {{category}}</p>
+                    </br></br>
+                    <label><b>Tags:</b></label>
+                    <tags-input ng-model="tags" add-on-paste="true" display-property="tagname" placeholder="Add a Tag" add-from-autocomplete-only="true">
+                        <auto-complete max-results-to-show="4" min-length="2" source="loadTags($query)"></auto-complete>
+                    </tags-input>
+                    <p>Model: {{tags}}</p>
+                    <input ng-click="submitData()" type="submit" value="Submit"></input>
+                    <p>{{myTxt}}</p>
+                    <p ng-show="show_result"><b>Submit result:</b> {{data}}</p>
+                </form>
+            </body>
+        {% endverbatim %}
+    {% endblock %}
+</html>
